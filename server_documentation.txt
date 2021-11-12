@@ -1,0 +1,116 @@
+apt install nginx virtualenv supervisor
+
+adduser user
+[ USER PASSWORD HERE ]
+
+su user
+
+cd ~
+
+virtualenv -p python3 ~/venv
+
+~/venv/bin/pip install gunicorn flask
+
+exit
+
+/etc/supervisor/supervisord.conf
+
+[ copy #1 to the bottom ]
+
+su user
+
+cd ~
+
+nano app.py
+
+[ copy #2 ]
+
+exit
+
+nano /etc/nginx/sites-enabled/default
+
+[ copy #3 ]
+
+reboot now
+
+
+
+========================
+# 1
+========================
+
+[program:voice]
+command=/home/user/venv/bin/gunicorn app:application
+directory=/home/user/
+user=user
+autostart=true
+autorestart=true
+redirect_stderr=true
+
+========================
+
+/////////////////////////////////////////////////////////////////
+
+========================
+# 2
+========================
+
+import argparse
+import logging
+from logging.handlers import RotatingFileHandler
+from flask import Flask, jsonify, make_response, send_from_directory
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+def create_app():
+    prep_application = Flask(__name__)
+    prep_application.debug = False
+    # setup RotatingFileHandler with maxBytes set to 25MB
+    rotating_log = RotatingFileHandler('voicemail_automator.log', maxBytes=25000000, backupCount=6)
+    prep_application.logger.addHandler(rotating_log)
+    rotating_log.setFormatter(logging.Formatter(fmt='[%(asctime)s] / %(levelname)s in %(module)s: %(message)s'))
+    prep_application.logger.setLevel(logging.INFO)
+    prep_application.secret_key = '5QiLi5BdsUYLn4kRKWnQ2vFkKGt9VQ5Q8MLFc6R6B6b5EEYkSd8Z4c2mtFf6i5SAVAziDNuBgCW7jRn7ji28M'
+    prep_application.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+    prep_application.config['MAX_CONTENT_LENGTH'] = 256
+    prep_application.config['PROGRAM_NAME'] = 'Voicemail Automator'
+    prep_application.config['VERSION'] = 1.0
+    prep_application.wsgi_app = ProxyFix(prep_application.wsgi_app, x_proto=1, x_host=1)
+    return prep_application
+
+
+application = create_app()
+application.app_context().push()
+
+
+@application.get('/index')
+@application.get('/')
+def index():
+    return make_response(jsonify({'message': 'hello'}), 200)
+
+========================
+
+/////////////////////////////////////////////////////////////////
+
+========================
+# 3
+========================
+
+server {
+
+    listen 80;
+
+    server_name _;
+
+    proxy_set_header    Host                 $host;
+    proxy_set_header    X-Real-IP            $remote_addr;
+    proxy_set_header    X-Forwarded-For      $proxy_add_x_forwarded_for;
+    proxy_set_header    X-Forwarded-Proto    $scheme;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+    }
+
+}
+
+
+========================
