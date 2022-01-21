@@ -327,7 +327,7 @@ def rock_and_roll(args, payload, backdoor):
 
 def individual_pins(args):
     the_pins = []
-    non_carrier_specific_pins = [args.top_pins, args.top_five_digit_pins, args.top_six_digit_pins,
+    non_carrier_specific_pins = [args.toppins, args.top_five_digit_pins, args.top_six_digit_pins,
                                  args.uncommon_four_pins, args.year_pins, args.month_year_pins, args.pins]
     if args.pins:
         the_pins = the_pins + args.pins
