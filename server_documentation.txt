@@ -41,6 +41,8 @@ exit
 
 nano /etc/nginx/sites-enabled/default
 
+[ Delete all within /etc/nginx/sites-enabled/default ]
+
 [ copy #3 ]
 
 [ Press CTRL+o ]
