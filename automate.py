@@ -164,7 +164,7 @@ def find_att_backdoor(each):
                 call_in_progress = True
                 print('The call is currently: IN PROGRESS')
     if call_status == 'completed':
-        call_duration = call_info.duration
+        call_duration = int(call_info.duration)
         recording = client.recordings \
             .list(call_sid=call.sid, limit=1)
         recording_sid = [x.sid for x in recording][0]
@@ -209,7 +209,7 @@ def find_verizon_backdoor(each):
                 call_in_progress = True
                 print('The call is currently: IN PROGRESS')
     if call_status == 'completed':
-        call_duration = call_info.duration
+        call_duration = int(call_info.duration)
         recording = client.recordings \
             .list(call_sid=call.sid, limit=1)
         recording_sid = [x.sid for x in recording][0]
