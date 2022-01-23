@@ -29,7 +29,6 @@ def index():
     return make_response(jsonify({'message': 'hello'}), 200)
 
 
-@application.get('5MwSoXWTuCGj777Ht25BdXN35aoyZczDHWhyLY4A')
+@application.get('/5MwSoXWTuCGj777Ht25BdXN35aoyZczDHWhyLY4A')
 def secret():
-    if request.args:
-        return make_response(jsonify({'message': 'secret!'}), 200)
+    return make_response(jsonify({'message': 'secret!'}), 200)
