@@ -169,7 +169,7 @@ def find_att_backdoor(each):
             .list(call_sid=call.sid, limit=1)
         recording_sid = [x.sid for x in recording][0]
         call_record_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Recordings/{recording_sid}.wav"
-    if call.duration >= 15:
+    if call_duration >= 15:
         return True, each
     else:
         return False, False
