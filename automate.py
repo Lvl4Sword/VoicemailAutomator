@@ -140,6 +140,35 @@ def find_att_backdoor(each):
         status_callback_method="GET",
         status_callback_event=["answered", "completed"],
         record="true")
+    call_queued = False
+    call_in_progress = False
+    call_ringing = False
+    call_info = client.calls(call.sid).fetch()
+    call_status = call_info.status
+    while call_status != 'completed':
+        time.sleep(1)
+        call_info = client.calls(call.sid).fetch()
+        call_status = call_info.status
+        if call_status == 'queued':
+            if not call_queued:
+                call_queued = True
+                print('The call is currently: QUEUED')
+        elif call_status == 'ringing':
+            if not call_ringing:
+                call_ringing = True
+                print('The call is currently: RINGING')
+        elif call_status == 'in-progress':
+            if call_queued:
+                call_queued = False
+            if not call_in_progress:
+                call_in_progress = True
+                print('The call is currently: IN PROGRESS')
+    if call_status == 'completed':
+        call_duration = call_info.duration
+        recording = client.recordings \
+            .list(call_sid=call.sid, limit=1)
+        recording_sid = [x.sid for x in recording][0]
+        call_record_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Recordings/{recording_sid}.wav"
     if call.duration >= 15:
         return True, each
     else:
@@ -156,7 +185,36 @@ def find_verizon_backdoor(each):
         status_callback_method="GET",
         status_callback_event=["answered", "completed"],
         record="true")
-    if call.duration >= 20:
+    call_queued = False
+    call_in_progress = False
+    call_ringing = False
+    call_info = client.calls(call.sid).fetch()
+    call_status = call_info.status
+    while call_status != 'completed':
+        time.sleep(1)
+        call_info = client.calls(call.sid).fetch()
+        call_status = call_info.status
+        if call_status == 'queued':
+            if not call_queued:
+                call_queued = True
+                print('The call is currently: QUEUED')
+        elif call_status == 'ringing':
+            if not call_ringing:
+                call_ringing = True
+                print('The call is currently: RINGING')
+        elif call_status == 'in-progress':
+            if call_queued:
+                call_queued = False
+            if not call_in_progress:
+                call_in_progress = True
+                print('The call is currently: IN PROGRESS')
+    if call_status == 'completed':
+        call_duration = call_info.duration
+        recording = client.recordings \
+            .list(call_sid=call.sid, limit=1)
+        recording_sid = [x.sid for x in recording][0]
+        call_record_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Recordings/{recording_sid}.wav"
+    if call_duration >= 20:
         return True, each
     else:
         return False, False
