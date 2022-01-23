@@ -515,11 +515,11 @@ def bruteforce(args):
         print(pins)
         if pins != []:
             payload = retrieve_payload_bruteforce(args, pins)
-            found, possible = rock_and_roll(args, payload, backdoor, pins)
+            found, possible = rock_and_roll(args, payload, backdoor)
             if possible:
                 for pin in pins:
                     payload = retrieve_payload_bruteforce(args, pin)
-                    found, possible = rock_and_roll(args, payload, backdoor, pins)
+                    found, possible = rock_and_roll(args, payload, backdoor)
                     if found:
                         print(f'The PIN for {args.usernumber} is {pin}')
             else:
