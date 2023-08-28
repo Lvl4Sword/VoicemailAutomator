@@ -10,8 +10,8 @@ from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 
 # Twilio setup
-account_sid = "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-auth_token = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+account_sid = "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+auth_token = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 twiml_brute_force_payload = '<?xml version="1.0" encoding="UTF-8"?><Response><Pause length="30"/><Hangup/></Response>'
 twiml_get_newest_message_payload = '<?xml version="1.0" encoding="UTF-8"?><Response><Pause length="10"/><Hangup/></Response>'
 twiml_find_backdoor_payload = '<?xml version="1.0" encoding="UTF-8"?><Response><Pause length="10"/><Hangup/></Response>'
